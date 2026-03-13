@@ -1,0 +1,8 @@
+name: review-and-notify
+version: "1.0.0"
+
+steps:
+  - id: review
+    effector: code-review
+  - id: notify
+    effector: slack-notify

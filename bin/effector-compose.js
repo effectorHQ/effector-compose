@@ -14,6 +14,7 @@
 import { readFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
 import { parsePipeline, typeCheck, build } from '../src/index.js';
+import { loadRegistry } from '../src/registry.js';
 
 const { values, positionals } = parseArgs({
   allowPositionals: true,
@@ -21,6 +22,7 @@ const { values, positionals } = parseArgs({
     help: { type: 'boolean', short: 'h' },
     version: { type: 'boolean', short: 'v' },
     target: { type: 'string', short: 't', default: 'json' },
+    registry: { type: 'string', short: 'r', default: '.' },
     input: { type: 'string' },
     output: { type: 'string' },
     format: { type: 'string', short: 'f', default: 'terminal' },
@@ -45,6 +47,7 @@ Commands:
 
 Options:
   -t, --target <runtime>    Build target (default: json)
+  -r, --registry <dir>      Directory to scan for effector.toml files (default: .)
   --input <type>            Input type for suggestions
   --output <type>           Output type for suggestions
   -f, --format <fmt>        Output format (default: terminal)
@@ -61,8 +64,16 @@ async function main() {
     case 'check': {
       const yml = readFileSync(pipelinePath, 'utf-8');
       const pipeline = parsePipeline(yml);
-      // In production, we'd load the type registry here
-      const registry = new Map();
+      const registryDir = values.registry || '.';
+      const registry = loadRegistry(registryDir);
+
+      if (registry.size === 0) {
+        console.log(`\n  Warning: No effector.toml files found in "${registryDir}"`);
+        console.log(`  Use --registry <dir> to point to a directory containing Effector packages.\n`);
+      } else {
+        console.log(`\n  Loaded ${registry.size} effector(s) from registry`);
+      }
+
       const result = typeCheck(pipeline, registry);
 
       if (result.valid) {

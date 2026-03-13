@@ -1,0 +1,19 @@
+[effector]
+name = "slack-notify"
+version = "0.5.0"
+type = "skill"
+description = "Send notifications to Slack channels"
+license = "MIT"
+emoji = "📢"
+tags = ["notification", "slack"]
+authors = ["effectorHQ Contributors"]
+min-spec-version = "0.1.0"
+
+[effector.interface]
+input   = "ReviewReport"
+output  = "Notification"
+context = ["GenericAPIKey"]
+
+[effector.permissions]
+network    = true
+subprocess = false

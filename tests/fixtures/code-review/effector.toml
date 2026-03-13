@@ -1,0 +1,19 @@
+[effector]
+name = "code-review"
+version = "1.2.0"
+type = "skill"
+description = "Review code diffs and produce structured review reports"
+license = "MIT"
+emoji = "🔍"
+tags = ["code-review", "quality"]
+authors = ["effectorHQ Contributors"]
+min-spec-version = "0.1.0"
+
+[effector.interface]
+input   = "CodeDiff"
+output  = "ReviewReport"
+context = []
+
+[effector.permissions]
+network    = false
+subprocess = false
