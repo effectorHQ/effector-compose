@@ -8,6 +8,7 @@
  */
 
 import { readFileSync } from 'node:fs';
+import { checkTypeCompatibility } from './type-checker.js';
 
 // ─── Pipeline Parser ─────────────────────────────────────────
 
@@ -122,39 +123,8 @@ export function typeCheck(pipeline, registry) {
   };
 }
 
-/**
- * Check structural type compatibility between output and input types.
- */
-function checkTypeCompatibility(outputType, inputType) {
-  if (!outputType || !inputType) {
-    return { compatible: true, outputType: 'unknown', inputType: 'unknown' };
-  }
-
-  const outputTypeName = typeof outputType === 'string' ? outputType : JSON.stringify(outputType);
-  const inputTypeName = typeof inputType === 'string' ? inputType : JSON.stringify(inputType);
-
-  // String-based type comparison
-  if (typeof outputType === 'string' && typeof inputType === 'string') {
-    // Wildcard matching
-    if (inputType.includes('*')) {
-      const pattern = inputType.replace('*', '');
-      return { compatible: outputType.includes(pattern), outputType, inputType };
-    }
-    return { compatible: outputType === inputType, outputType, inputType };
-  }
-
-  // Structural comparison for object types
-  if (typeof outputType === 'object' && typeof inputType === 'object') {
-    for (const key of Object.keys(inputType)) {
-      if (!(key in outputType)) {
-        return { compatible: false, outputType: outputTypeName, inputType: inputTypeName };
-      }
-    }
-    return { compatible: true, outputType: outputTypeName, inputType: inputTypeName };
-  }
-
-  return { compatible: false, outputType: outputTypeName, inputType: inputTypeName };
-}
+// checkTypeCompatibility is imported from ./type-checker.js
+// Supports: exact match, alias resolution, subtype relations, wildcard matching
 
 // ─── Build Targets ───────────────────────────────────────────
 

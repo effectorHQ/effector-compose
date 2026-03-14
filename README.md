@@ -200,8 +200,9 @@ npx effector-compose visualize ./pipeline.effector.yml --format svg
 
 ## Roadmap
 
-- [ ] **v0.1** — Pipeline YAML format, sequential type-checking, CLI
-- [ ] **v0.2** — Parallel composition, conditional branching
+- [x] **v0.1** — Pipeline YAML format, sequential type-checking, CLI, registry loader
+- [x] **v0.2** — Type checker backed by effector-types/types.json (alias resolution, subtype relations)
+- [ ] **v0.3** — Parallel composition, conditional branching
 - [ ] **v0.3** — Auto-discovery, pipeline suggestion
 - [ ] **v0.4** — Build targets (Lobster, LangGraph, CrewAI)
 - [ ] **v0.5** — Cost tracking, budget constraints
