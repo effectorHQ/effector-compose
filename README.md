@@ -1,6 +1,7 @@
 # effector-compose
 
 [![npm version](https://img.shields.io/badge/npm-effector--compose-E03E3E.svg)](https://www.npmjs.com/package/effector-compose)
+[![CI](https://github.com/effectorHQ/effector-compose/actions/workflows/test.yml/badge.svg)](https://github.com/effectorHQ/effector-compose/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Status: Alpha](https://img.shields.io/badge/status-alpha-orange.svg)](#)
 
@@ -17,6 +18,20 @@ Today, you write this by hand — a LangGraph state machine, a Lobster pipeline,
 **67% of multi-agent system failures come from these composition errors** — not from individual tool bugs, but from the interfaces between them ([arXiv:2501.06322](https://arxiv.org/abs/2501.06322)).
 
 `effector-compose` solves this by type-checking the entire pipeline before execution.
+
+## Install
+
+```bash
+npm install effector-compose
+```
+
+You can also use the CLI directly without installing globally:
+
+```bash
+npx effector-compose pipeline.toml
+```
+
+See the published package on npm: **https://www.npmjs.com/package/effector-compose**
 
 ## How It Works
 
