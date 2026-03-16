@@ -30,6 +30,9 @@
   "bugs": {
     "url": "https://github.com/effectorHQ/effector-compose/issues"
   },
+  "files": [
+    "src/"
+  ],
   "engines": {
     "node": ">=18.0.0"
   },
