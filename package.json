@@ -8,7 +8,7 @@
   },
   "type": "module",
   "scripts": {
-    "test": "node --test tests/",
+    "test": "node --test tests/*.test.js",
     "lint": "node --check src/*.js"
   },
   "keywords": [
@@ -34,6 +34,7 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
-    "effector-types": "^0.1.0"
+    "@effectorhq/core": "file:../effector-core",
+    "effector-types": "file:../effector-types"
   }
 }

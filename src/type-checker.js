@@ -5,4 +5,4 @@
  * Re-exports checkTypeCompatibility with the same API contract.
  */
 
-export { checkTypeCompatibility } from '../../effector-core/src/type-checker.js';
+export { checkTypeCompatibility } from '@effectorhq/core/types';
