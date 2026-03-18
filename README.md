@@ -69,7 +69,7 @@ steps:
 ### Type-check it
 
 ```bash
-npx effector-compose check ./pipeline.effector.yml
+npx @effectorhq/compose check ./pipeline.effector.yml
 
   Step 1: review
     ✓ Input type CodeDiff matches code-review@1.2.0 interface
@@ -97,7 +97,7 @@ npx effector-compose check ./pipeline.effector.yml
 ### Execute it
 
 ```bash
-npx effector-compose run ./pipeline.effector.yml --trigger '{"diff": "..."}'
+npx @effectorhq/compose run ./pipeline.effector.yml --trigger '{"diff": "..."}'
 ```
 
 The engine handles:
@@ -123,10 +123,10 @@ Good question. Those tools orchestrate agent execution. `effector-compose` opera
 
 ```bash
 # Type-check, then output as Lobster pipeline
-npx effector-compose build ./pipeline.effector.yml --target lobster
+npx @effectorhq/compose build ./pipeline.effector.yml --target lobster
 
 # Type-check, then output as LangGraph state machine
-npx effector-compose build ./pipeline.effector.yml --target langgraph
+npx @effectorhq/compose build ./pipeline.effector.yml --target langgraph
 ```
 
 ## The Composition Algebra
@@ -175,7 +175,7 @@ If estimated cost exceeds budget, the engine suggests cheaper alternative Effect
 Don't know which Effectors to use? Describe what you want:
 
 ```bash
-npx effector-compose suggest \
+npx @effectorhq/compose suggest \
   --input CodeDiff \
   --output "notification to team about code quality"
 
@@ -194,7 +194,7 @@ npx effector-compose suggest \
 Effectors can declare dependencies on other Effectors. `effector-compose` resolves the full dependency tree:
 
 ```bash
-npx effector-compose resolve ./pipeline.effector.yml
+npx @effectorhq/compose resolve ./pipeline.effector.yml
 
   Required Effectors:
     code-review@1.2.0      (direct)
@@ -212,7 +212,7 @@ npx effector-compose resolve ./pipeline.effector.yml
 Generate visual pipeline diagrams (integrates with [effector-graph](https://github.com/effectorHQ/effector-graph)):
 
 ```bash
-npx effector-compose visualize ./pipeline.effector.yml --format svg
+npx @effectorhq/compose visualize ./pipeline.effector.yml --format svg
 ```
 
 ## Roadmap
