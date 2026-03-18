@@ -1,6 +1,6 @@
 # effector-compose
 
-[![npm version](https://img.shields.io/badge/npm-effector--compose-E03E3E.svg)](https://www.npmjs.com/package/effector-compose)
+[![npm version](https://img.shields.io/badge/npm-%40effectorhq%2Fcompose-E03E3E.svg)](https://www.npmjs.com/package/@effectorhq/compose)
 [![CI](https://github.com/effectorHQ/effector-compose/actions/workflows/test.yml/badge.svg)](https://github.com/effectorHQ/effector-compose/actions/workflows/test.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Status: Alpha](https://img.shields.io/badge/status-alpha-orange.svg)](#)
@@ -22,16 +22,18 @@ Today, you write this by hand — a LangGraph state machine, a Lobster pipeline,
 ## Install
 
 ```bash
-npm install effector-compose
+npm install @effectorhq/compose
 ```
+
+This package currently depends on `effector-types` (stdlib) for the type catalog.
 
 You can also use the CLI directly without installing globally:
 
 ```bash
-npx effector-compose pipeline.toml
+npx @effectorhq/compose pipeline.toml
 ```
 
-See the published package on npm: **https://www.npmjs.com/package/effector-compose**
+See the published package on npm: **https://www.npmjs.com/package/@effectorhq/compose**
 
 ## How It Works
 
