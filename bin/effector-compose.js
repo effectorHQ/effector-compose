@@ -9,11 +9,12 @@
  *   effector-compose suggest --input <type> --output <type>   Suggest pipeline
  *   effector-compose resolve <pipeline.yml>                   Resolve dependencies
  *   effector-compose visualize <pipeline.yml>                 Generate diagram
+ *   effector-compose run <pipeline.yml>                       Dry-run execution plan
  */
 
 import { readFileSync } from 'node:fs';
 import { parseArgs } from 'node:util';
-import { parsePipeline, typeCheck, build } from '../src/index.js';
+import { parsePipeline, typeCheck, build, resolve, suggest, dryRun, renderPipelineSVG } from '../src/index.js';
 import { loadRegistry } from '../src/registry.js';
 
 const { values, positionals } = parseArgs({
@@ -30,7 +31,8 @@ const { values, positionals } = parseArgs({
 });
 
 if (values.version) {
-  console.log('effector-compose 0.1.0');
+  const pkg = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf-8'));
+  console.log(`effector-compose ${pkg.version}`);
   process.exit(0);
 }
 
@@ -44,6 +46,7 @@ Commands:
   suggest                   Suggest pipeline (--input <type> --output <type>)
   resolve <pipeline.yml>    Resolve dependency tree
   visualize <pipeline.yml>  Generate pipeline diagram
+  run <pipeline.yml>        Dry-run execution plan
 
 Options:
   -t, --target <runtime>    Build target (default: json)
@@ -97,16 +100,108 @@ async function main() {
     }
 
     case 'suggest':
-      console.log('Pipeline suggestion is not yet implemented. Coming in v0.3.');
-      process.exit(0);
+      if (!values.input || !values.output) {
+        console.error('Usage: effector-compose suggest --input <type> --output <type> [--registry <dir>]');
+        process.exit(1);
+      }
+      if (!pipelinePath) {
+        // suggest doesn't need a pipelinePath positional; allow it to be omitted
+      }
+      {
+        const registryDir = values.registry || '.';
+        const registry = loadRegistry(registryDir);
+        const result = suggest(registry, values.input, values.output);
+        if (values.format === 'json') {
+          console.log(JSON.stringify(result, null, 2));
+          process.exit(0);
+        } else {
+          if (!result.suggestions.length) {
+            console.log(`No suggestions found for ${values.input} → ${values.output}`);
+            process.exit(0);
+          }
+          console.log(`\nSuggestions for ${values.input} → ${values.output}:\n`);
+          for (let i = 0; i < result.suggestions.length; i++) {
+            const s = result.suggestions[i];
+            const chain = s.steps.map((st) => `${st.name}${st.version ? `@${st.version}` : ''}`).join(' -> ');
+            console.log(`  ${i + 1}. ${chain}  (weight: ${s.weight.toFixed(2)})`);
+          }
+          console.log('');
+          process.exit(0);
+        }
+      }
 
     case 'resolve':
-      console.log('Dependency resolution is not yet implemented. Coming in v0.3.');
-      process.exit(0);
+      if (!pipelinePath) {
+        console.error('Usage: effector-compose resolve <pipeline.yml> [--registry <dir>]');
+        process.exit(1);
+      }
+      {
+        const yml = readFileSync(pipelinePath, 'utf-8');
+        const pipeline = parsePipeline(yml);
+        const registryDir = values.registry || '.';
+        const registry = loadRegistry(registryDir);
+        const result = resolve(pipeline, registry);
+        if (values.format === 'json') {
+          console.log(JSON.stringify(result, null, 2));
+        } else {
+          if (!result.valid) {
+            console.log('\nMissing effectors:\n');
+            for (const m of result.missing) console.log(`  - ${m.id}: ${m.effector}`);
+            console.log('');
+          } else {
+            console.log(`\nResolved ${result.steps.length} step(s) successfully.\n`);
+          }
+        }
+        process.exit(result.valid ? 0 : 1);
+      }
 
     case 'visualize':
-      console.log('Visualization requires effector-graph. Install with: npm install effector-graph');
-      process.exit(0);
+      if (!pipelinePath) {
+        console.error('Usage: effector-compose visualize <pipeline.yml> [--format terminal|json]');
+        process.exit(1);
+      }
+      {
+        const yml = readFileSync(pipelinePath, 'utf-8');
+        const pipeline = parsePipeline(yml);
+        const svg = renderPipelineSVG(pipeline);
+        if (values.format === 'json') {
+          console.log(JSON.stringify({ svg }, null, 2));
+        } else {
+          console.log(svg);
+        }
+        process.exit(0);
+      }
+
+    case 'run': {
+      if (!pipelinePath) {
+        console.error('Usage: effector-compose run <pipeline.yml> [--registry <dir>]');
+        process.exit(1);
+      }
+      const yml = readFileSync(pipelinePath, 'utf-8');
+      const pipeline = parsePipeline(yml);
+      const registryDir = values.registry || '.';
+      const registry = loadRegistry(registryDir);
+      const plan = dryRun(pipeline, registry);
+
+      if (values.format === 'json') {
+        console.log(JSON.stringify(plan, null, 2));
+      } else {
+        if (!plan.typeCheck.valid) {
+          console.log('\nDry-run: type-check FAILED.\n');
+          for (const err of plan.typeCheck.errors) console.log(`  ✗ [${err.step}] ${err.message}`);
+          console.log('');
+          process.exit(1);
+        }
+        console.log('\nDry-run execution plan (type-check PASSED):\n');
+        plan.executionPlan.steps.forEach((s, idx) => {
+          const parallel = s.parallelWith ? ` (parallelWith: ${s.parallelWith})` : '';
+          console.log(`  ${idx + 1}. ${s.id}: ${s.effector}${s.version ? `@${s.version}` : ''}${parallel}`);
+        });
+        console.log('');
+      }
+
+      process.exit(plan.typeCheck.valid ? 0 : 1);
+    }
 
     default:
       console.error(`Unknown command: ${command}`);

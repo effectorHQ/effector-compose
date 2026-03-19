@@ -94,18 +94,15 @@ npx @effectorhq/compose check ./pipeline.effector.yml
 
 **The entire pipeline is verified before a single token is spent.** Type mismatches, missing contexts, invalid parallel execution, and permission conflicts are caught at definition time.
 
-### Execute it
+### Execute it (dry-run)
 
 ```bash
-npx @effectorhq/compose run ./pipeline.effector.yml --trigger '{"diff": "..."}'
+npx @effectorhq/compose run ./pipeline.effector.yml
+# or JSON output
+npx @effectorhq/compose run ./pipeline.effector.yml -f json
 ```
 
-The engine handles:
-- **Parallel execution** of independent steps (review and security run simultaneously)
-- **Type coercion** where structural subtyping allows it
-- **Error propagation** with typed error channels
-- **Cost tracking** per step and aggregate
-- **Fallback execution** when a step fails and alternatives exist
+`run` does not execute any effector. It generates a dry-run execution plan after type-checking and resolving each step against the local registry.
 
 ## Why Not Just Use LangGraph / Lobster / CrewAI?
 
@@ -179,40 +176,26 @@ npx @effectorhq/compose suggest \
   --input CodeDiff \
   --output "notification to team about code quality"
 
-  Suggested pipeline (3 steps, ~0.06 USD):
-    1. code-review@1.2.0     CodeDiff → ReviewReport
-    2. quality-score@0.8.0   ReviewReport → QualityScore
-    3. slack-notify@0.5.0    QualityScore → Notification
-
-  Alternative pipeline (2 steps, ~0.03 USD):
-    1. quick-review@2.0.0    CodeDiff → QualitySummary
-    2. slack-notify@0.5.0    QualitySummary → Notification
+  Suggested chain(s):
+    1. code-review@1.2.0 → slack-notify@0.5.0
 ```
 
 ### Dependency Resolution
 
-Effectors can declare dependencies on other Effectors. `effector-compose` resolves the full dependency tree:
+`effector-compose resolve` maps each pipeline step to the corresponding `EffectorDef` found in your local registry. It reports missing effectors when a step can't be resolved.
 
 ```bash
 npx @effectorhq/compose resolve ./pipeline.effector.yml
-
-  Required Effectors:
-    code-review@1.2.0      (direct)
-    security-scan@2.0.0    (direct)
-    aggregate-report@1.0.0 (direct)
-    slack-notify@0.5.0     (direct)
-    gh-client@3.1.0        (dependency of code-review)
-    sarif-parser@1.0.0     (dependency of security-scan)
-
-  All dependencies resolved. No conflicts.
 ```
 
 ### Visualization
 
-Generate visual pipeline diagrams (integrates with [effector-graph](https://github.com/effectorHQ/effector-graph)):
+Generate visual pipeline diagrams (self-contained SVG renderer):
 
 ```bash
-npx @effectorhq/compose visualize ./pipeline.effector.yml --format svg
+npx @effectorhq/compose visualize ./pipeline.effector.yml > pipeline.svg
+# or JSON output
+npx @effectorhq/compose visualize ./pipeline.effector.yml -f json
 ```
 
 ## Roadmap
@@ -220,7 +203,7 @@ npx @effectorhq/compose visualize ./pipeline.effector.yml --format svg
 - [x] **v0.1** — Pipeline YAML format, sequential type-checking, CLI, registry loader
 - [x] **v0.2** — Type checker backed by effector-types/types.json (alias resolution, subtype relations)
 - [ ] **v0.3** — Parallel composition, conditional branching
-- [ ] **v0.3** — Auto-discovery, pipeline suggestion
+- [x] **v0.3** — Auto-discovery, pipeline suggestion
 - [ ] **v0.4** — Build targets (Lobster, LangGraph, CrewAI)
 - [ ] **v0.5** — Cost tracking, budget constraints
 - [ ] **v1.0** — Production-ready composition engine

@@ -126,6 +126,263 @@ export function typeCheck(pipeline, registry) {
 // checkTypeCompatibility is imported from ./type-checker.js
 // Supports: exact match, alias resolution, subtype relations, wildcard matching
 
+// ─── Resolve ───────────────────────────────────────────────
+
+/**
+ * Resolve a parsed pipeline against the effector registry.
+ *
+ * This does not attempt to execute anything; it only maps each step's
+ * `effector` name to the corresponding EffectorDef from the registry.
+ *
+ * @param {Pipeline} pipeline
+ * @param {Map<string, EffectorDef>} registry
+ * @returns {{
+ *   valid: boolean,
+ *   steps: Array<{
+ *     id: string,
+ *     effector: string,
+ *     version: string|null,
+ *     interface: any,
+ *     permissions: any
+ *   }>,
+ *   missing: Array<{ id: string, effector: string }>
+ * }}
+ */
+export function resolve(pipeline, registry) {
+  const steps = [];
+  const missing = [];
+
+  for (const step of pipeline.steps) {
+    const effectorDef = registry.get(step.effector);
+
+    if (!effectorDef) {
+      missing.push({ id: step.id, effector: step.effector });
+      continue;
+    }
+
+    steps.push({
+      id: step.id,
+      effector: effectorDef.name || step.effector,
+      version: effectorDef.version || null,
+      interface: effectorDef.interface || {},
+      permissions: effectorDef.permissions || {},
+    });
+  }
+
+  return {
+    valid: missing.length === 0,
+    steps,
+    missing,
+  };
+}
+
+// ─── Suggest ───────────────────────────────────────────────
+
+/**
+ * Suggest a short effector chain transforming `inputType` into `outputType`.
+ *
+ * Implementation: build a compatibility graph between EffectorDefs in the registry,
+ * then BFS for the shortest chain up to `maxDepth`.
+ *
+ * @param {Map<string, EffectorDef>} registry
+ * @param {string} inputType
+ * @param {string} outputType
+ * @param {{ maxDepth?: number, limit?: number }} [options]
+ * @returns {{
+ *   inputType: string,
+ *   outputType: string,
+ *   suggestions: Array<{
+ *     steps: Array<{ name: string, version: string|null, input: string|null, output: string|null }>,
+ *     weight: number
+ *   }>
+ * }}
+ */
+export function suggest(registry, inputType, outputType, options = {}) {
+  const maxDepth = options.maxDepth ?? 3;
+  const limit = options.limit ?? 3;
+
+  if (!inputType || !outputType) {
+    return { inputType: inputType || '', outputType: outputType || '', suggestions: [] };
+  }
+
+  const effectors = [...registry.values()].filter((def) => def?.interface?.input && def?.interface?.output);
+
+  const canStart = (def) => {
+    const compat = checkTypeCompatibility(inputType, def.interface.input);
+    return compat.compatible;
+  };
+  const canEnd = (def) => {
+    const compat = checkTypeCompatibility(def.interface.output, outputType);
+    return compat.compatible;
+  };
+
+  /** @type {Array<{ def: EffectorDef, input: string, output: string }>} */
+  const nodes = effectors.map((def) => ({
+    def,
+    input: def.interface.input,
+    output: def.interface.output,
+  }));
+
+  const startIdx = nodes
+    .map((n, idx) => ({ n, idx }))
+    .filter(({ n }) => canStart(n.def))
+    .map(({ idx }) => idx);
+
+  const endIdx = new Set(
+    nodes
+      .map((n, idx) => ({ n, idx }))
+      .filter(({ n }) => canEnd(n.def))
+      .map(({ idx }) => idx),
+  );
+
+  const suggestions = [];
+
+  for (const start of startIdx) {
+    /** @type {Array<{ path: number[], weight: number }>} */
+    const queue = [{ path: [start], weight: 0 }];
+
+    while (queue.length > 0) {
+      const current = queue.shift();
+      const path = current.path;
+      const last = path[path.length - 1];
+
+      if (path.length > maxDepth) continue;
+
+      if (endIdx.has(last) && path.length > 0) {
+        suggestions.push({
+          steps: path.map((i) => ({
+            name: nodes[i].def.name,
+            version: nodes[i].def.version || null,
+            input: nodes[i].def.interface.input || null,
+            output: nodes[i].def.interface.output || null,
+          })),
+          weight: current.weight,
+        });
+        continue;
+      }
+
+      // Expand
+      for (let next = 0; next < nodes.length; next++) {
+        if (path.includes(next)) continue; // avoid cycles
+
+        const fromDef = nodes[last].def;
+        const toDef = nodes[next].def;
+
+        const compat = checkTypeCompatibility(fromDef.interface.output, toDef.interface.input);
+        if (!compat.compatible) continue;
+
+        const nextWeight = current.weight + (typeof compat.precision === 'number' ? compat.precision : 0.5);
+        queue.push({ path: [...path, next], weight: nextWeight });
+      }
+    }
+  }
+
+  suggestions.sort((a, b) => b.weight - a.weight || a.steps.length - b.steps.length);
+
+  return {
+    inputType,
+    outputType,
+    suggestions: suggestions.slice(0, limit),
+  };
+}
+
+// ─── Run (dry-run plan) ────────────────────────────────────
+
+/**
+ * Generate a dry-run execution plan for a pipeline.
+ *
+ * @param {Pipeline} pipeline
+ * @param {Map<string, EffectorDef>} registry
+ * @returns {{
+ *   mode: 'dry-run',
+ *   typeCheck: ReturnType<typeof typeCheck>,
+ *   resolved: ReturnType<typeof resolve>,
+ *   executionPlan: {
+ *     steps: Array<{
+ *       id: string,
+ *       effector: string,
+ *       version: string|null,
+ *       inputType: string|null,
+ *       outputType: string|null,
+ *       parallelWith: string|null
+ *     }>,
+ *   }
+ * }}
+ */
+export function dryRun(pipeline, registry) {
+  const typeCheckResult = typeCheck(pipeline, registry);
+  const resolved = resolve(pipeline, registry);
+
+  const resolvedById = new Map(resolved.steps.map((s) => [s.id, s]));
+
+  const steps = pipeline.steps.map((step) => {
+    const r = resolvedById.get(step.id);
+    return {
+      id: step.id,
+      effector: r?.effector || step.effector,
+      version: r?.version || null,
+      inputType: r?.interface?.input || null,
+      outputType: r?.interface?.output || null,
+      parallelWith: step.parallelWith || null,
+    };
+  });
+
+  return {
+    mode: 'dry-run',
+    typeCheck: typeCheckResult,
+    resolved,
+    executionPlan: { steps },
+  };
+}
+
+// ─── Visualization ───────────────────────────────────────────
+
+/**
+ * Render a pipeline (linear + parallel markers) into SVG.
+ * This mirrors the minimal structure of the effector-graph renderer,
+ * but keeps effector-compose self-contained (no optional dependency).
+ *
+ * @param {Pipeline} pipeline
+ * @param {{ width?: number, height?: number }} [options]
+ * @returns {string} SVG markup
+ */
+export function renderPipelineSVG(pipeline, options = {}) {
+  const { width = 1000, height = 400 } = options;
+  const stepWidth = 160;
+  const stepHeight = 60;
+  const gap = 80;
+  const startX = 60;
+  const centerY = height / 2;
+
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}">`;
+  svg += `<style>
+    .step-rect { rx: 8; ry: 8; stroke: #ddd; stroke-width: 1.5; }
+    .step-name { font-family: 'Inter', system-ui, sans-serif; font-size: 13px; fill: #333; font-weight: 600; }
+    .step-effector { font-family: 'Inter', system-ui, sans-serif; font-size: 10px; fill: #666; }
+    .connector { stroke: #999; stroke-width: 1.5; fill: none; marker-end: url(#arrow2); }
+  </style>`;
+  svg += `<defs><marker id="arrow2" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#999"/></marker></defs>`;
+
+  let x = startX;
+  for (let i = 0; i < pipeline.steps.length; i++) {
+    const step = pipeline.steps[i];
+    const y = step.parallelWith ? centerY - stepHeight - 10 : centerY - stepHeight / 2;
+
+    svg += `<rect class="step-rect" x="${x}" y="${y}" width="${stepWidth}" height="${stepHeight}" fill="#f8f9fa"/>`;
+    svg += `<text class="step-name" x="${x + stepWidth / 2}" y="${y + 24}" text-anchor="middle">${step.id}</text>`;
+    svg += `<text class="step-effector" x="${x + stepWidth / 2}" y="${y + 42}" text-anchor="middle">${step.effector || ''}</text>`;
+
+    if (i < pipeline.steps.length - 1) {
+      svg += `<line class="connector" x1="${x + stepWidth}" y1="${centerY}" x2="${x + stepWidth + gap}" y2="${centerY}"/>`;
+    }
+
+    x += stepWidth + gap;
+  }
+
+  svg += `</svg>`;
+  return svg;
+}
+
 // ─── Build Targets ───────────────────────────────────────────
 
 /**
