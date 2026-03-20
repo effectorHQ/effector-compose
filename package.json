@@ -42,6 +42,6 @@
   },
   "dependencies": {
     "@effectorhq/core": "^1.0.0",
-    "effector-types": "^0.2.0"
+    "@effectorhq/types": "^1.0.0"
   }
 }

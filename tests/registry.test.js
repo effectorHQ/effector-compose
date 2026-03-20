@@ -90,3 +90,20 @@ describe('typeCheck with registry', () => {
     assert.ok(result.errors.some(e => e.message.includes('Type mismatch')));
   });
 });
+
+describe('parsePipeline validation', () => {
+  it('rejects duplicate step IDs', () => {
+    const yml = `name: dup-test
+version: "1.0.0"
+steps:
+  - id: review
+    effector: code-review
+  - id: review
+    effector: slack-notify`;
+    assert.throws(() => parsePipeline(yml), (err) => {
+      assert.ok(err.message.includes('Duplicate step ID'));
+      assert.ok(err.message.includes('review'));
+      return true;
+    });
+  });
+});

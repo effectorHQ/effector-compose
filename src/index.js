@@ -43,6 +43,15 @@ export function parsePipeline(yamlContent) {
   }
   if (currentStep) pipeline.steps.push(currentStep);
 
+  // Validate step ID uniqueness
+  const seen = new Set();
+  for (const step of pipeline.steps) {
+    if (seen.has(step.id)) {
+      throw new Error(`Duplicate step ID "${step.id}" in pipeline "${pipeline.name}"`);
+    }
+    seen.add(step.id);
+  }
+
   return pipeline;
 }
 
