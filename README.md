@@ -2,7 +2,7 @@
 
 [![npm](https://img.shields.io/npm/v/@effectorhq/compose?color=E03E3E&logo=npm&logoColor=white)](https://www.npmjs.com/package/@effectorhq/compose)
 [![CI](https://github.com/effectorHQ/effector-compose/actions/workflows/test.yml/badge.svg)](https://github.com/effectorHQ/effector-compose/actions/workflows/test.yml)
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![License: Apache 2.0](https://img.shields.io/badge/license-Apache-2.0-blue.svg)](LICENSE)
 [![Status: Alpha](https://img.shields.io/badge/status-alpha-orange.svg)](#)
 
 **Type-checked composition engine for AI agent capabilities.**
@@ -219,8 +219,9 @@ The composition engine needs:
 
 ## License
 
-[MIT](./LICENSE)
+[Apache-2.0](./LICENSE)
 
+This project is currently licensed under the Apache 2.0 License 。
 ---
 
 <sub>Part of the <a href="https://github.com/effectorHQ">effectorHQ</a> studio. We build hands for AI that moves first.</sub>
