@@ -1,3 +1,8 @@
+> **📦 Consolidated.** This package is now part of [`effectorHQ/effector`](https://github.com/OpenClawHQ/effectorhq) → `packages/compose/`.
+> All active development continues in the monorepo. This repository remains available for reference.
+
+---
+
 # effector-compose
 
 [![npm](https://img.shields.io/npm/v/@effectorhq/compose?color=E03E3E&logo=npm&logoColor=white)](https://www.npmjs.com/package/@effectorhq/compose)
